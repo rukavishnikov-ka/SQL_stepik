@@ -1,0 +1,254 @@
+Мини-выжимка по пройденному материалу для тех кто как и я не смог все сразу запомнить.
+
+ПОРЯДОК ЗАПРОСОВ
+SELECT         (ЧТО ВЫВОДИТЬ)                          -- 1. Выбор столбцов
+FROM           (ИЗ КАКОЙ ТАБЛИЦЫ)                -- 2. Указание таблиц
+WHERE        (КАКИЕ СТРОКИ)                            -- 3. Условия фильтрации строк для предварительной фильтрации строк до группировки данных
+GROUP BY  (ГРУППИРОВКА ПО)                       -- 4. Группировка по какому признаку
+HAVING      (КАКИЕ ГРУППЫ)                            -- 5. Условия фильтрации групп после группировки для фильтрации получившихся групп по определённым условиям
+ORDER BY   (СОРТИРОВКА ПО)                        -- 6. Сортировка
+LIMIT           (СКОЛЬКО СТРОК ВЫВЕСТИ)       -- 7. Ограничение количества строк
+OFFSET       (ПРОПУСТИТЬ  СТРОКИ)               -- 8. Пропуск строк (если есть)
+
+Важно запомнить:
+
+Пишем в порядке: SELECT → FROM → WHERE → GROUP BY → HAVING → ORDER BY → LIMIT
+Выполняется в порядке: FROM → WHERE → GROUP BY → HAVING → SELECT → ORDER BY → LIMIT
+ПРОСТОЕ ПРАВИЛО:
+
+Сначала работаем с данными (FROM, WHERE)
+Потом группируем (GROUP BY, HAVING)
+Потом выбираем что показывать (SELECT)
+В конце оформляем (ORDER BY, LIMIT)
+Очень важный момент для понимания разницы между WHERE и HAVING:
+
+WHERE используется для предварительной фильтрации строк до группировки данных. То есть с его помощью вы отбираете записи, которые будут участвовать в группировке.
+
+HAVING применяется после группировки для фильтрации получившихся групп по определённым условиям.
+
+Нюансы:
+1.Обязательные блоки: SELECT и FROM (кроме некоторых случаев)
+2.Порядок блоков: Фиксированный, менять нельзя
+3.Регистр: Обычно неважен, но принято писать ключевые слова заглавными
+4.Точка с запятой: В конце запроса (обязательно между несколькими запросами)
+
+ПОЧЕМУ ЭТО ВАЖНО ПОНИМАТЬ?
+1. WHERE vs HAVING
+-- ОШИБКА: amount не существует после GROUP BY!
+SELECT author, AVG(price)
+FROM book
+GROUP BY author
+HAVING amount > 10;  -- ОШИБКА! amount уже сгруппирован
+
+-- ПРАВИЛЬНО:
+SELECT author, AVG(price)
+FROM book
+WHERE amount > 10     -- фильтруем СТРОКИ до группировки
+GROUP BY author;
+
+-- ИЛИ:
+
+SELECT author, AVG(price)
+FROM book
+GROUP BY author
+HAVING SUM(amount) > 10;  -- фильтруем ГРУППЫ после группировки
+
+2. Алиасы в WHERE
+
+-- ОШИБКА: book_count еще не существует!
+SELECT author, COUNT(*) AS book_count
+FROM book
+WHERE book_count > 5;  -- ОШИБКА! book_count создается в SELECT
+
+-- ПРАВИЛЬНО:
+SELECT author, COUNT(*) AS book_count
+FROM book
+GROUP BY author
+HAVING COUNT(*) > 5;  -- используем оригинальное выражение
+ 
+3. Оптимизация запросов
+-- Медленнее: сначала группируем всё, потом фильтруем
+SELECT author, COUNT(*)
+FROM book
+GROUP BY author
+HAVING price > 500;  -- ОШИБКА логическая, но даже если бы работало
+
+-- Быстрее: сначала фильтруем, потом группируем
+SELECT author, COUNT(*)
+FROM book
+WHERE price > 500     -- меньше данных для группировки
+GROUP BY author;
+
+ПРИМЕРЫ БЛОКОВ ДЕТАЛЬНО
+SELECT - выбор столбцов
+SELECT
+
+    column1,                        -- простой столбец
+
+    column2 * 10 AS new,   -- вычисление с псевдонимом
+
+    COUNT(*) AS count,       -- агрегатная функция
+
+    (SELECT ...) AS sub   -- подзапрос
+
+FROM - источники данных
+FROM
+    table1                  -- одна таблица
+    JOIN table2 ON ...      -- соединение таблиц
+    (SELECT ...) AS alias   -- подзапрос как таблица
+
+WHERE - фильтрация строк
+
+WHERE
+
+    column = 'value'        -- простое условие
+
+    AND (column2 > 10 OR column3 IS NULL)  -- сложные условия
+
+    AND column4 IN (SELECT ...)  -- подзапрос
+
+ 
+
+GROUP BY - группировка
+
+GROUP BY
+
+    column1,        -- группировка по столбцу
+
+    column2         -- множественная группировка
+
+    -- ROLLUP/CUBE  -- расширенные группировки (не во всех СУБД)
+
+ 
+
+HAVING - фильтрация групп
+
+HAVING
+
+    COUNT(*) > 5            -- условие на агрегатную функцию
+
+    AND SUM(price) < 1000
+
+ 
+
+ORDER BY - сортировка
+
+ORDER BY
+
+    column1 ASC,    -- сортировка по возрастанию (по умолчанию)
+
+    column2 DESC,   -- сортировка по убыванию
+
+    3 ASC           -- сортировка по номеру столбца
+
+ 
+
+LIMIT/OFFSET - ограничения
+
+LIMIT 10           -- первые 10 строк
+
+LIMIT 5 OFFSET 10  -- строки 11-15 (пропустить 10, взять 5)
+
+ 
+
+ ВИДЫ ЗАПРОСОВ И ИХ СТРУКТУРА
+
+SELECT (чтение)
+
+SELECT ... FROM ... [WHERE] ... [GROUP BY] ... [HAVING] ... [ORDER BY] ... [LIMIT]
+
+ 
+
+INSERT (добавление)
+
+-- Способ 1: С указанием столбцов
+
+INSERT INTO table (col1, col2)
+
+VALUES (val1, val2), (val3, val4);
+
+ 
+
+-- Способ 2: Из другого запроса
+
+INSERT INTO table1 (col1, col2)
+
+SELECT col3, col4 FROM table2 WHERE ...;
+
+ 
+
+UPDATE (обновление)
+
+UPDATE table
+
+SET col1 = value1,
+
+    col2 = value2
+
+WHERE condition;
+
+ 
+
+DELETE (удаление)
+
+DELETE FROM table
+
+WHERE condition;
+
+ 
+
+CREATE TABLE (создание таблицы)
+
+CREATE TABLE table_name (
+
+    id INT PRIMARY KEY,
+
+    name VARCHAR(50) NOT NULL,
+
+    price DECIMAL(10,2) DEFAULT 0.00,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
+
+ 
+
+JOIN (соединения)
+
+SELECT *
+
+FROM table1
+
+    INNER JOIN table2 ON table1.id = table2.table1_id
+
+    LEFT JOIN table3 ON table2.id = table3.table2_id
+
+    FULL OUTER JOIN table4 ON ...
+
+ 
+
+ПОДЗАПРОСЫ
+
+-- В WHERE
+
+SELECT * FROM t1 WHERE id IN (SELECT id FROM t2);
+
+ 
+
+-- В FROM (как таблица)
+
+SELECT * FROM (SELECT * FROM t1) AS subquery;
+
+ 
+
+-- В SELECT (скалярный)
+
+SELECT name, (SELECT COUNT(*) FROM t2) AS count FROM t1;
+
+ 
+
+WITH cte_name AS (
+
+    SELECT * FROM table1 WHERE condition)
+
+SELECT * FROM cte_name
+
+JOIN table2 ON ...;
